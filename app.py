@@ -6,6 +6,7 @@
 
 import html
 import re
+from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
@@ -64,6 +65,18 @@ def load_draft(path: Path) -> dict:
     }
 
 
+@app.template_filter("clock")
+def clock(ts: float | None) -> str:
+    return datetime.fromtimestamp(ts).strftime("%d.%m %H:%M") if ts else ""
+
+
+@app.template_filter("minutes")
+def minutes(run: dict) -> str:
+    if not (run.get("started") and run.get("finished")):
+        return ""
+    return f"{max(1, round((run['finished'] - run['started']) / 60))} мин"
+
+
 @app.get("/")
 def index():
     drafts = [load_draft(p) for p in sorted(POSTS_DIR.glob("*.md"), reverse=True)]
@@ -98,6 +111,7 @@ def job_api(job_id):
 @app.get("/draft/<name>")
 def draft_page(name):
     return render_template("draft.html", draft=load_draft(draft_path(name)),
+                           runs=pipeline.load_runs(name), steps=pipeline.STEPS,
                            running=pipeline.active_job())
 
 

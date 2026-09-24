@@ -14,6 +14,7 @@
       {% if draft.meta.evidence_level %}<div><dt>Уровень доказательности</dt><dd>{{ draft.meta.evidence_level }}</dd></div>{% endif %}
       <div><dt>Длина</dt><dd>{{ draft.length }} / 4096 символов</dd></div>
       <div><dt>Файл</dt><dd class="step-agent">posts/{{ draft.name }}</dd></div>
+      {% if runs %}<div><dt>Проверка</dt><dd><a href="#history">Как проверялся этот пост ↓</a></dd></div>{% endif %}
     </dl>
 
     {% if draft.status == "draft" %}
@@ -34,6 +35,40 @@
     {% endif %}
   </aside>
 </div>
+
+{% if runs %}
+<section class="card history" id="history">
+  <h2>Как проверялся этот пост</h2>
+  {% for run in runs %}
+  <article class="run">
+    <div class="run-head">
+      <span class="step-name">{{ "Доработка" if run.title.startswith("Доработка") else "Прогон" }} {{ loop.index }}</span>
+      <span class="d-meta">{{ run.started | clock }}{% if run | minutes %} · {{ run | minutes }}{% endif %}</span>
+      <span class="pill {{ 'published' if run.result.status == 'PASS' else 'rejected' }}">{{ run.result.status }}</span>
+    </div>
+    {% if not run.title.startswith("Доработка") %}<p class="hint">Вход: {{ run.title }}</p>{% endif %}
+    <ol class="steps">
+      {% for agent, label in steps %}
+      {% set note = (run.result.steps or []) | selectattr("agent", "equalto", agent) | first %}
+      <li class="{{ run.steps[agent] }}">
+        <div class="step-icon">{{ loop.index }}</div>
+        <div>
+          <div class="step-name">{{ label }}</div>
+          <div class="step-note">
+            {% if run.steps[agent] == "skipped" %}не требуется — факты из первого прогона
+            {% elif note %}{{ [note.result, note.note] | select | join(" — ") }}{% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% if run.result.issues %}<ul class="issues">{% for i in run.result.issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+    {% if run.result.message %}<p>{{ run.result.message }}</p>{% endif %}
+    {% if run.log %}<p class="hint">Лог: {{ run.log }}</p>{% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

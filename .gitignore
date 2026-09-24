@@ -3,6 +3,7 @@
 __pycache__/
 .DS_Store
 logs/
+runs/
 posts/*
 !posts/.gitkeep
 .claude/settings.local.json

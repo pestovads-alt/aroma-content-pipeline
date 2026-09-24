@@ -169,3 +169,10 @@ dl.meta dt { color: var(--muted); font-size: 13px; }
 dl.meta dd { margin: 0; font-weight: 600; }
 
 details summary { cursor: pointer; font-weight: 600; margin-top: 16px; }
+
+/* история проверки */
+.history { margin-top: 24px; }
+.run + .run { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 20px; }
+.run-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 4px; }
+.run-head .pill { margin-left: auto; }
+dl.meta a { color: var(--accent); }

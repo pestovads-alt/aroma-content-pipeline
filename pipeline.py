@@ -17,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 LOGS_DIR = ROOT / "logs"
+RUNS_DIR = ROOT / "runs"
 RUN_TIMEOUT_SEC = 30 * 60
 
 STEPS = [
@@ -163,4 +164,22 @@ def _run(job: dict, prompt: str) -> None:
 
     if job["current"]:
         job["steps"][job["current"]] = "done" if result.get("status") == "PASS" else "stopped"
-    job.update(state="done", result=result)
+    job.update(state="done", result=result, finished=time.time())
+    save_run(job)
+
+
+def save_run(job: dict) -> None:
+    """Сохраняет итог прогона рядом с черновиком — история проверки переживает перезапуск."""
+    saved_to = (job.get("result") or {}).get("saved_to") or ""
+    folder = RUNS_DIR / (Path(saved_to).stem or "_без-черновика")
+    folder.mkdir(parents=True, exist_ok=True)
+    record = {k: job.get(k) for k in ("id", "title", "started", "finished", "steps", "result", "log")}
+    stamp = time.strftime("%Y-%m-%d_%H-%M", time.localtime(job["started"]))
+    (folder / f"{stamp}_{job['id']}.json").write_text(
+        json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_runs(draft_name: str) -> list[dict]:
+    """История прогонов для черновика, от первого к последнему."""
+    folder = RUNS_DIR / Path(draft_name).stem
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(folder.glob("*.json"))]
