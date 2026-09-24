@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ draft.meta.oil or draft.name }} — Аромапост{% endblock %}
+{% block content %}
+<div id="flash"></div>
+<div class="draft-grid">
+  <section class="tg-preview">
+    <div class="tg-bubble">{{ draft.html | safe }}</div>
+  </section>
+
+  <aside class="card">
+    <dl class="meta">
+      <div><dt>Статус</dt><dd><span class="pill {{ draft.status }}">{{ draft.status_label }}</span></dd></div>
+      {% if draft.meta.oil %}<div><dt>Масло</dt><dd>{{ draft.meta.oil }}</dd></div>{% endif %}
+      {% if draft.meta.evidence_level %}<div><dt>Уровень доказательности</dt><dd>{{ draft.meta.evidence_level }}</dd></div>{% endif %}
+      <div><dt>Длина</dt><dd>{{ draft.length }} / 4096 символов</dd></div>
+      <div><dt>Файл</dt><dd class="step-agent">posts/{{ draft.name }}</dd></div>
+    </dl>
+
+    {% if draft.status == "draft" %}
+    <div class="actions">
+      <button class="btn" id="publish" {% if draft.length > 4096 %}disabled{% endif %}>Опубликовать в канал</button>
+      <form method="post" action="{{ url_for('draft_reject', name=draft.name) }}">
+        <button class="btn danger" type="submit">Отклонить</button>
+      </form>
+    </div>
+    <details>
+      <summary>Вернуть на доработку</summary>
+      <form method="post" action="{{ url_for('draft_revise', name=draft.name) }}">
+        <label for="feedback" class="hint">Что поправить — писатель и финальная проверка пройдут заново</label>
+        <textarea id="feedback" name="feedback" rows="4" required placeholder="например: короче вступление, добавить про возраст детей"></textarea>
+        <div class="actions"><button class="btn secondary" type="submit" {% if running %}disabled{% endif %}>Отправить на доработку</button></div>
+      </form>
+    </details>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const btn = document.getElementById("publish");
+if (btn) btn.addEventListener("click", async () => {
+  if (!confirm("Опубликовать этот пост в Telegram-канал? Отменить публикацию отсюда будет нельзя.")) return;
+  btn.disabled = true;
+  btn.textContent = "Публикую…";
+  const res = await fetch({{ url_for('draft_publish', name=draft.name) | tojson }}, { method: "POST" });
+  const data = await res.json();
+  const flash = document.getElementById("flash");
+  const box = document.createElement("div");
+  if (data.status === "ok") {
+    box.className = "notice ok";
+    box.textContent = `✅ Опубликовано в канал (сообщение №${data.message_id}).`;
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    box.className = "notice err";
+    box.textContent = "❌ Не опубликовано: " + data.error;
+    btn.disabled = false;
+    btn.textContent = "Опубликовать в канал";
+  }
+  flash.replaceChildren(box);
+});
+</script>
+{% endblock %}

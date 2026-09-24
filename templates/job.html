@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Прогон — Аромапост{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Прогон конвейера</h1>
+  <p class="hint">{{ job.title }}</p>
+  <p class="timer" id="timer"></p>
+  <ol class="steps" id="steps">
+    {% for agent, label in steps %}
+    <li data-agent="{{ agent }}" class="{{ job.steps[agent] }}">
+      <div class="step-icon">{{ loop.index }}</div>
+      <div>
+        <div class="step-name">{{ label }}</div>
+        <div class="step-agent">{{ agent }}</div>
+        <div class="step-note"></div>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<section class="card" id="outcome" hidden>
+  <h2 id="outcome-title"></h2>
+  <p id="outcome-message"></p>
+  <ul class="issues" id="outcome-issues"></ul>
+  <div class="actions" id="outcome-actions"></div>
+  <p class="hint" id="outcome-log"></p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const jobId = {{ job.id | tojson }};
+const started = {{ job.started | tojson }} * 1000;
+const titles = {
+  PASS: "✅ Черновик готов",
+  FAIL: "⛔ Конвейер остановлен на проверке",
+  INSUFFICIENT_DATA: "⚠️ Недостаточно данных",
+  no_natural_angle: "🤔 Факт верный, но пост не складывается",
+  pipeline_error: "⚠️ Сбой одного из агентов",
+};
+
+function el(tag, text) { const e = document.createElement(tag); e.textContent = text; return e; }
+
+function render(job) {
+  for (const li of document.querySelectorAll("#steps li")) {
+    li.className = job.steps[li.dataset.agent] || "pending";
+    if (li.className === "skipped") li.querySelector(".step-note").textContent = "не требуется — факты из первого прогона";
+  }
+  if (job.state === "running") {
+    const min = Math.floor((Date.now() - started) / 60000);
+    document.getElementById("timer").textContent = `Идёт работа… ${min} мин. Страницу можно не обновлять.`;
+    return false;
+  }
+  document.getElementById("timer").textContent = "";
+  const box = document.getElementById("outcome");
+  box.hidden = false;
+  const actions = document.getElementById("outcome-actions");
+  actions.replaceChildren();
+
+  if (job.state === "error") {
+    document.getElementById("outcome-title").textContent = "⚠️ Прогон не завершился";
+    document.getElementById("outcome-message").textContent = job.error || "";
+  } else {
+    const r = job.result;
+    document.getElementById("outcome-title").textContent = titles[r.status] || r.status;
+    document.getElementById("outcome-message").textContent = r.message || "";
+    const issues = document.getElementById("outcome-issues");
+    issues.replaceChildren(...(r.issues || []).map(i => el("li", i)));
+    for (const s of r.steps || []) {
+      const li = document.querySelector(`#steps li[data-agent="${s.agent}"] .step-note`);
+      if (li) li.textContent = [s.result, s.note].filter(Boolean).join(" — ");
+    }
+    if (r.saved_to) {
+      const a = el("a", "Открыть черновик →");
+      a.className = "btn";
+      a.href = "/draft/" + encodeURIComponent(r.saved_to.split("/").pop());
+      actions.append(a);
+    }
+  }
+  const back = el("a", "На главную");
+  back.className = "btn secondary";
+  back.href = "/";
+  actions.append(back);
+  if (job.log) document.getElementById("outcome-log").textContent = "Полный лог прогона: " + job.log;
+  return true;
+}
+
+async function poll() {
+  const res = await fetch(`/api/job/${jobId}`);
+  if (res.ok && render(await res.json())) return;
+  setTimeout(poll, 3000);
+}
+poll();
+</script>
+{% endblock %}

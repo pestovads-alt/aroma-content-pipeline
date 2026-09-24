@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+{% if running %}
+<div class="notice">Сейчас идёт прогон: «{{ running.title }}». <a href="{{ url_for('job_page', job_id=running.id) }}">Смотреть прогресс →</a></div>
+{% endif %}
+
+<section class="card">
+  <h1>Новый пост</h1>
+  <p class="hint">Четыре агента разберут исследование, сверят факты с PubMed и Tisserand, напишут пост и проверят его на безопасность. Займёт 5–15 минут. В канал ничего не уйдёт без вашей кнопки.</p>
+  <form method="post" action="{{ url_for('run') }}">
+    <label for="source">Исследование или тема <span class="hint">— ссылка, текст статьи или название масла</span></label>
+    <textarea id="source" name="source" rows="5" required placeholder="https://pubmed.ncbi.nlm.nih.gov/…&#10;или: Лаванда и качество сна"></textarea>
+    <label for="focus">Фокус поста <span class="hint">— необязательно</span></label>
+    <input id="focus" name="focus" type="text" placeholder="например: для мам детей 3–6 лет, вечерний ритуал">
+    <div class="actions">
+      <button class="btn" type="submit" {% if running %}disabled{% endif %}>Запустить конвейер</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Черновики</h2>
+  {% if drafts %}
+  <ul class="drafts">
+    {% for d in drafts %}
+    <li><a href="{{ url_for('draft_page', name=d.name) }}">
+      <span>
+        <span class="d-title">{{ d.meta.oil or d.name }}</span><br>
+        <span class="d-meta">{{ d.meta.date }}{% if d.meta.evidence_level %} · доказательность: {{ d.meta.evidence_level }}{% endif %}</span>
+      </span>
+      <span class="pill {{ d.status }}">{{ d.status_label }}</span>
+    </a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">Пока пусто — запустите конвейер, и готовый черновик появится здесь.</p>
+  {% endif %}
+</section>
+{% endblock %}
