@@ -7,3 +7,4 @@ runs/
 posts/*
 !posts/.gitkeep
 .claude/settings.local.json
+server.log
