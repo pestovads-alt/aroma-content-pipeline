@@ -36,4 +36,22 @@
   <p class="empty">Пока пусто — запустите конвейер, и готовый черновик появится здесь.</p>
   {% endif %}
 </section>
+
+{% if stopped %}
+<section class="card">
+  <h2>Остановленные прогоны</h2>
+  <p class="hint">Темы, которые не прошли проверку, — пост по ним не был написан.</p>
+  <ul class="drafts">
+    {% for r in stopped %}
+    <li><a href="{{ url_for('job_page', job_id=r.id) }}">
+      <span>
+        <span class="d-title">{{ r.title }}</span><br>
+        <span class="d-meta">{{ r.started | clock }}{% if r.result and r.result.oil %} · {{ r.result.oil }}{% endif %}</span>
+      </span>
+      <span class="pill rejected">{{ (r.result or {}).status or "без итога" }}</span>
+    </a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 {% endblock %}

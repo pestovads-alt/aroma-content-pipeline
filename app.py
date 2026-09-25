@@ -80,7 +80,8 @@ def minutes(run: dict) -> str:
 @app.get("/")
 def index():
     drafts = [load_draft(p) for p in sorted(POSTS_DIR.glob("*.md"), reverse=True)]
-    return render_template("index.html", drafts=drafts, running=pipeline.active_job())
+    return render_template("index.html", drafts=drafts, running=pipeline.active_job(),
+                           stopped=pipeline.load_stopped_runs())
 
 
 @app.post("/run")
@@ -98,13 +99,13 @@ def run():
 
 @app.get("/job/<job_id>")
 def job_page(job_id):
-    job = pipeline.jobs.get(job_id) or abort(404)
+    job = pipeline.find_job(job_id) or abort(404)
     return render_template("job.html", job=job, steps=pipeline.STEPS)
 
 
 @app.get("/api/job/<job_id>")
 def job_api(job_id):
-    job = pipeline.jobs.get(job_id) or abort(404)
+    job = pipeline.find_job(job_id) or abort(404)
     return jsonify({k: job.get(k) for k in ("state", "steps", "current", "result", "error", "log", "started")})
 
 

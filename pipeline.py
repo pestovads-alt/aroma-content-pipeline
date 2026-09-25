@@ -183,3 +183,20 @@ def load_runs(draft_name: str) -> list[dict]:
     """История прогонов для черновика, от первого к последнему."""
     folder = RUNS_DIR / Path(draft_name).stem
     return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(folder.glob("*.json"))]
+
+
+def load_stopped_runs() -> list[dict]:
+    """Прогоны, которые не дошли до черновика (FAIL и т. п.), от новых к старым."""
+    folder = RUNS_DIR / "_без-черновика"
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(folder.glob("*.json"), reverse=True)]
+
+
+def find_job(job_id: str) -> dict | None:
+    """Прогон из памяти, а после перезапуска сервера — из сохранённой истории в runs/."""
+    if job := jobs.get(job_id):
+        return job
+    if not re.fullmatch(r"[0-9a-f]{8}", job_id):  # id из uuid4; иначе glob подхватит чужие файлы
+        return None
+    for path in RUNS_DIR.glob(f"*/*_{job_id}.json"):
+        return {**json.loads(path.read_text(encoding="utf-8")), "state": "done", "current": None}
+    return None
